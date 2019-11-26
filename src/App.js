@@ -9,7 +9,7 @@ import { listNotes } from './graphql/queries'
 import { createNote, deleteNote, updateNote } from './graphql/mutations'
 
 // Suscriptions
-import { onCreateNote } from './graphql/subscriptions'
+import { onCreateNote, onDeleteNote, onUpdateNote } from './graphql/subscriptions'
 
 /* Users:
 Urhen123123
@@ -24,14 +24,36 @@ function App() {
   useEffect(() => {
     getInitialNotes()
 
-    /* API.graphql(graphqlOperation(onCreateNote)).subscribe({
+    const createNoteListener = API.graphql(graphqlOperation(onCreateNote)).subscribe({
       next: noteData => {
         const newNote = noteData.value.data.onCreateNote
-        const newNotes = notes.filter(note => note.id !== newNote.id)
 
-        setNotes(prevNotes => [...newNotes, newNote.data.createNote])
+        setNotes(prevNotes => {
+          const newNotes = prevNotes.filter(note => note.id !== newNote.id)
+          return [...newNotes, newNote]
+        })
       },
-    }) */
+    })
+
+    const deleteNoteListener = API.graphql(graphqlOperation(onDeleteNote)).subscribe({
+      next: noteData => {
+        const deletedNote = noteData.value.data.onDeleteNote
+        setNotes(prevNotes => prevNotes.filter(prevNote => prevNote.id !== deletedNote.id))
+      },
+    })
+
+    const updateNoteListener = API.graphql(graphqlOperation(onUpdateNote)).subscribe({
+      next: noteData => {
+        const updatedNote = noteData.value.data.onUpdateNote
+        setNotes(prevNotes => prevNotes.map(note => (note.id === updatedNote.id ? updatedNote : note)))
+      },
+    })
+
+    return () => {
+      createNoteListener.unsuscribe()
+      deleteNoteListener.unsuscribe()
+      updateNoteListener.unsuscribe()
+    }
   }, [])
 
   async function getInitialNotes() {
@@ -44,38 +66,28 @@ function App() {
   const handleSubmit = async event => {
     event.preventDefault()
 
-    // Check if we have an existing note, if so update it
     const hasExistingNote = notes.find(({ id }) => id === noteId)
     if (hasExistingNote) return handleUpdateNote()
 
     const input = { note: newNote }
-    const newNoteSaved = await API.graphql(graphqlOperation(createNote, { input }))
+    await API.graphql(graphqlOperation(createNote, { input }))
 
     setNewNote('')
-    setNotes(prevNotes => [...prevNotes, newNoteSaved.data.createNote])
-  }
-
-  const handleUpdateNote = async () => {
-    const input = { id: noteId, note: newNote }
-    const existingNoteUpdate = await API.graphql(graphqlOperation(updateNote, { input }))
-
-    setNotes(prevNotes =>
-      prevNotes.map(note => {
-        return note.id === existingNoteUpdate.data.updateNote.id ? existingNoteUpdate.data.updateNote : note
-      })
-    )
-  }
-
-  const handleDeleteNote = async id => {
-    const input = { id }
-    const newNoteRemoved = await API.graphql(graphqlOperation(deleteNote, { input }))
-
-    setNotes(prevNotes => prevNotes.filter(prevNote => prevNote.id !== newNoteRemoved.data.deleteNote.id))
   }
 
   const handleSetNote = async ({ id, note }) => {
     setNoteId(id)
     setNewNote(note)
+  }
+
+  const handleUpdateNote = async () => {
+    const input = { id: noteId, note: newNote }
+    await API.graphql(graphqlOperation(updateNote, { input }))
+  }
+
+  const handleDeleteNote = async id => {
+    const input = { id }
+    await API.graphql(graphqlOperation(deleteNote, { input }))
   }
 
   return (
