@@ -50,9 +50,9 @@ function App() {
     })
 
     return () => {
-      createNoteListener.unsuscribe()
-      deleteNoteListener.unsuscribe()
-      updateNoteListener.unsuscribe()
+      createNoteListener.unsubscribe()
+      deleteNoteListener.unsubscribe()
+      updateNoteListener.unsubscribe()
     }
   }, [])
 
