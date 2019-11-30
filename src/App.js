@@ -58,6 +58,7 @@ function App() {
 
   async function getInitialNotes() {
     const notesData = await API.graphql(graphqlOperation(listNotes))
+    console.log('TCL: getInitialNotes -> notesData', notesData)
     setNotes(notesData.data.listNotes.items)
   }
 
